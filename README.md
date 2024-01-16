@@ -1,15 +1,16 @@
 # Basic Setup
 
-To enable Rust toolchain, go through the normal init process:
+Install the latest Rust toolchains from Rustup at https://www.rust-lang.org/tools/install. You should choose install through .exe installer for Windows.
 
-```ps1
-> .\<WinFabRoot>\init.ps1 clear_cache
-```
+After installation, you will be able to run `cargo` commands from the terminal.
 
-This will auto config cargo.exe to run in the current environment.
-
-Then go to this directory (where the Cargo.toml located) and run:
+Go into this directory (where the Cargo.toml located) and run the following command to compile the code.
 
 ```ps1
 cargo build
+```
+
+Run the following commands to run all the unit tests
+```ps1
+cargo test
 ```
