@@ -6,11 +6,11 @@ pub struct ApplicationIdentifier {
 impl ApplicationIdentifier {
     pub fn delimeter() -> String {
         const DELIMETER: &str = "_App";
-        return String::from(DELIMETER);
+        String::from(DELIMETER)
     }
 
     pub fn env_var_name_application_id() -> String {
         const ENVVARNAME_APPLICATIONID: &str = "Fabric_ApplicationId";
-        return String::from(ENVVARNAME_APPLICATIONID);
+        String::from(ENVVARNAME_APPLICATIONID)
     }
 }

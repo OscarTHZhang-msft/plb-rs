@@ -3,17 +3,18 @@ use std::{
     sync::{Arc, Mutex, MutexGuard},
 };
 
-mod common;
-mod federation;
-mod reliability;
-mod servicemodel;
+pub mod application;
+pub mod failoverunit;
+pub mod node;
+pub mod service;
+pub mod servicetype;
 
-use federation::nodeid::NodeId;
-use reliability::loadbalancingcomponent::application::Application;
-use reliability::loadbalancingcomponent::failoverunit::FailoverUnit;
-use reliability::loadbalancingcomponent::node::Node;
-use reliability::loadbalancingcomponent::service::Service;
-use reliability::loadbalancingcomponent::servicetype::ServiceType;
+use application::application::Application;
+use failoverunit::failoverunit::FailoverUnit;
+use node::node::Node;
+use node::nodeid::NodeId;
+use service::service::Service;
+use servicetype::servicetype::ServiceType;
 
 use std::cmp::Ordering;
 

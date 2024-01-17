@@ -1,9 +1,0 @@
-pub mod loadbalancingcomponent;
-pub mod nodedeactivationintent;
-pub mod nodedeactivationstatus;
-pub mod scalingmechanism;
-pub mod scalingmechanismkind;
-pub mod scalingtrigger;
-pub mod scalingtriggerkind;
-pub mod servicescalingpolicydescription;
-pub mod servicetagscollection;

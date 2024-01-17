@@ -1,4 +1,4 @@
-use crate::federation::nodeid::NodeId;
+use crate::node::nodeid::NodeId;
 use std::collections::HashSet;
 
 pub struct ServiceTypeDescription {

@@ -1,5 +1,4 @@
-use crate::common::largeinteger::LargeInteger;
-use crate::federation::nodeid::NodeId;
+use super::nodeid::NodeId;
 
 pub struct NodeInstance {
     id: NodeId,
