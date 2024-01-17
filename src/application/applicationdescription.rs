@@ -1,5 +1,8 @@
-use super::applicationcapacitiesdescription::ApplicationCapacitiesDescription;
+//! The internal state of an [Application]
+
 use std::collections::HashMap;
+use super::applicationcapacitiesdescription::ApplicationCapacitiesDescription;
+use super::application::Application;
 
 pub struct ApplicationDescription {
     app_name: String,
