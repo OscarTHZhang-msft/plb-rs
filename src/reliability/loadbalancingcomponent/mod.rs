@@ -1,3 +1,15 @@
+pub mod application;
+pub mod applicationcapacitiesdescription;
+pub mod applicationdescription;
+pub mod builtintype;
+pub mod failoverunit;
+pub mod inbuildlimits;
 pub mod node;
 pub mod nodedescription;
-pub mod inbuildlimits;
+pub mod service;
+pub mod servicedescription;
+pub mod servicemetric;
+pub mod servicescalingindexgroup;
+pub mod servicesensitivity;
+pub mod servicetype;
+pub mod servicetypedescription;

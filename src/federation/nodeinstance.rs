@@ -1,23 +1,21 @@
 use crate::common::largeinteger::LargeInteger;
 use crate::federation::nodeid::NodeId;
 
-pub struct NodeInstance
-{
+pub struct NodeInstance {
     id: NodeId,
-    instance_id : u64,
+    instance_id: u64,
 }
 
-impl NodeInstance
-{
-    pub fn default() -> NodeInstance{
-        NodeInstance{
+impl NodeInstance {
+    pub fn default() -> NodeInstance {
+        NodeInstance {
             id: NodeId::default(),
             instance_id: 0,
         }
     }
 
-    pub fn new(id: NodeId, instance_id: u64) -> NodeInstance{
-        NodeInstance{
+    pub fn new(id: NodeId, instance_id: u64) -> NodeInstance {
+        NodeInstance {
             id: id,
             instance_id: instance_id,
         }

@@ -6,8 +6,14 @@ use std::{
 mod common;
 mod federation;
 mod reliability;
+mod servicemodel;
 
+use federation::nodeid::NodeId;
+use reliability::loadbalancingcomponent::application::Application;
+use reliability::loadbalancingcomponent::failoverunit::FailoverUnit;
 use reliability::loadbalancingcomponent::node::Node;
+use reliability::loadbalancingcomponent::service::Service;
+use reliability::loadbalancingcomponent::servicetype::ServiceType;
 
 use std::cmp::Ordering;
 
@@ -15,22 +21,15 @@ use anyhow::Result;
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
-type NodeId = u64;
-
-// pub struct Node;
-pub struct Application;
-pub struct ServiceType;
-pub struct Service;
-pub struct FailoverUnit;
 pub struct LoadOrMoveCost;
 
 pub struct PLBScheduler;
 
-pub struct EngineTimer; 
+pub struct EngineTimer;
 
 pub struct Searcher;
 
-/// Similar to the C++ implementation. This is the main entry point of the entire PLB engine. 
+/// Similar to the C++ implementation. This is the main entry point of the entire PLB engine.
 /// It consists of all the required data structures to basically does 3 things:
 ///     1. Listen to update cluster info API calls
 ///     2. Run the PLB refresh loop
@@ -191,7 +190,7 @@ impl PlacementAndLoadBalancing {
         node1: NodeId,
         node2: NodeId,
     ) -> i32 {
-        match node1.cmp(&node2) {
+        match node1.cmp(node2) {
             Ordering::Less => -1,
             Ordering::Equal => 0,
             Ordering::Greater => 1,
