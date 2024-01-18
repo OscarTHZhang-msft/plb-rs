@@ -14,10 +14,7 @@ impl NodeInstance {
     }
 
     pub fn new(id: NodeId, instance_id: u64) -> NodeInstance {
-        NodeInstance {
-            id,
-            instance_id,
-        }
+        NodeInstance { id, instance_id }
     }
 }
 

@@ -90,7 +90,6 @@ impl PLBScheduler {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::scheduler;
