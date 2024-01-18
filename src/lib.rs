@@ -1,34 +1,43 @@
 use std::{
-    collections::VecDeque,
-    sync::{Arc, Mutex, MutexGuard},
+    collections::{BTreeMap, VecDeque},
+    sync::{Arc, Mutex},
 };
 
 pub mod application;
 pub mod failoverunit;
 pub mod node;
+pub mod scheduler;
+pub mod searcher;
 pub mod service;
 pub mod servicetype;
+pub mod solver;
 
 use application::application::Application;
 use failoverunit::failover_unit::FailoverUnit;
 use node::node::Node;
 use node::node_id::NodeId;
+use scheduler::PLBScheduler;
 use service::service::Service;
 use servicetype::service_type::ServiceType;
 
 use std::cmp::Ordering;
 
 use anyhow::Result;
-use time::PrimitiveDateTime;
+use searcher::Searcher;
+use solver::Solver;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 pub struct LoadOrMoveCost;
 
-pub struct PLBScheduler;
-
-pub struct EngineTimer;
-
-pub struct Searcher;
+struct UpdateQueue {
+    node_update_queue: VecDeque<Node>,
+    app_update_queue: VecDeque<Application>,
+    service_type_update_queue: VecDeque<ServiceType>,
+    service_update_queue: VecDeque<Service>,
+    failover_unit_update_queue: VecDeque<FailoverUnit>,
+    load_update_queue: VecDeque<LoadOrMoveCost>,
+}
 
 /// Similar to the C++ implementation. This is the main entry point of the entire PLB engine.
 /// It consists of all the required data structures to basically does 3 things:
@@ -36,23 +45,21 @@ pub struct Searcher;
 ///     2. Run the PLB refresh loop
 ///     3. Schedule searches and solutions if required
 pub struct PlacementAndLoadBalancing {
-    nodes: Vec<Node>,
-    apps: Vec<Application>,
-    service_types: Vec<ServiceType>,
-    services: Vec<Service>,
-    failover_units: Vec<FailoverUnit>,
-    loads: Vec<LoadOrMoveCost>,
+    nodes: BTreeMap<NodeId, Node>,
+    apps: BTreeMap<String, Application>,
+    service_types: BTreeMap<String, ServiceType>,
+    services: BTreeMap<String, Service>,
+    failover_units: BTreeMap<Uuid, FailoverUnit>,
+    loads: BTreeMap<Uuid, LoadOrMoveCost>,
 
     scheduler: PLBScheduler,
-    timer: EngineTimer,
 
-    // TODO: we might need to use a single lock for all data structures' pending updates
-    node_update_queue: Arc<Mutex<VecDeque<Node>>>,
-    app_update_queue: Arc<Mutex<VecDeque<Application>>>,
-    service_type_update_queue: Arc<Mutex<VecDeque<ServiceType>>>,
-    service_update_queue: Arc<Mutex<VecDeque<Service>>>,
-    failover_unit_update_queue: Arc<Mutex<VecDeque<FailoverUnit>>>,
-    load_update_queue: Arc<Mutex<VecDeque<LoadOrMoveCost>>>,
+    searcher: Searcher,
+    solver: Solver,
+
+    /// PLB cannot operate on stale operation, but also cannot be interrupted by the new update when searching for solutions
+    /// This update queue is guarded by a single mutex and is read by PLB on the start of the refresh
+    plb_update_queue: Arc<Mutex<UpdateQueue>>,
 }
 
 impl Default for PlacementAndLoadBalancing {
@@ -119,63 +126,39 @@ impl PlacementAndLoadBalancing {
 
     /// Refresh the PLB data structures from the pending update queues.
     /// It also triggers PLBSchedular to schedule any searcher stages if any stages are due at the current timestamp of the refresh (now)
-    pub fn refresh(&mut self, now: PrimitiveDateTime) -> Result<()> {
+    pub fn refresh(&mut self, now: OffsetDateTime) -> Result<()> {
         // Update PLB internal data structures to sync with the latest cluster information
-        // Keep all the locks in one scope so that they will be locked and released together
-        // TODO: we might need to consider using a single mutex for all the pending queues, because there maybe internal dependencies between each structure
-        // For example, failover unit may contain newly created nodes
         {
-            // Process node updates
-            let node_updates_clone = Arc::clone(&self.node_update_queue);
-            let mut node_updates = node_updates_clone.lock().unwrap();
-            self.internal_update_nodes(&mut node_updates)?;
+            let update_queue_clone = Arc::clone(&self.plb_update_queue);
+            let mut update_queue = update_queue_clone.lock().unwrap();
 
-            // Process app updates
-            let app_updates_clone = Arc::clone(&self.app_update_queue);
-            let mut app_updates = app_updates_clone.lock().unwrap();
-            self.internal_update_apps(&mut app_updates)?;
+            let mut node_updates = &update_queue.node_update_queue;
+            let mut app_updates = &update_queue.app_update_queue;
+            let mut service_type_updates = &update_queue.service_type_update_queue;
+            let mut service_updates = &update_queue.service_update_queue;
+            let mut failover_unit_updates = &update_queue.failover_unit_update_queue;
+            let mut load_or_move_cost_updates = &update_queue.load_update_queue;
 
-            // Process service type updates
-            let service_type_updates_clone = Arc::clone(&self.service_type_update_queue);
-            let mut service_type_updates = service_type_updates_clone.lock().unwrap();
-            self.internal_update_service_types(&mut service_type_updates)?;
-
-            // TODO: implement the rest of the update sync
+            // Copy over the updates to the PLB structure for snapshot
             todo!();
         }
 
         // TODO: let scheduler decide what phases will be run in this refresh
         // TODO: this should be run on each service domain, but for simplicity we can pack everything into one service domain
-        todo!();
+        let phases = self.scheduler.get_current_phases(now);
 
-        // TODO: for each action generated by the scheduler, active PLB searcher to search for solution
-        todo!();
+        let mut solutions = vec![];
+        // TODO: for each phase  generated by the scheduler, active PLB searcher to search for any actions, and
+        // activate solver to generate any solutions
+        for phase in phases {
+            let actions = self.searcher.generate_actions(phase);
+            solutions = self.solver.generate_solutions(actions);
+        }
 
-        // TODO: give result back to FM (this will just be printing out the solution to the console for now)
-        todo!();
+        // TODO: give action generated by the solver back to FM (this will just be printing out the solution to the console for now)
+        println!("Solutions generated: {:?}", solutions);
 
         Ok(())
-    }
-
-    fn internal_update_nodes<'a>(
-        &mut self,
-        node_updates: &mut MutexGuard<'a, VecDeque<Node>>,
-    ) -> Result<()> {
-        unimplemented!()
-    }
-
-    fn internal_update_apps<'a>(
-        &mut self,
-        app_updates: &mut MutexGuard<'a, VecDeque<Application>>,
-    ) -> Result<()> {
-        unimplemented!()
-    }
-
-    fn internal_update_service_types<'a>(
-        &mut self,
-        service_type_updates: &mut MutexGuard<'a, VecDeque<ServiceType>>,
-    ) -> Result<()> {
-        unimplemented!()
     }
 
     /// Given a failover unit and 2 candicate secondary replicas, return the comparision result for promoting to primary
