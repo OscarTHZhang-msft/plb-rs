@@ -1,8 +1,8 @@
 //! The internal state of a [Node]
 
-use std::collections::HashMap;
 use super::node::Node;
 use super::node_instance::NodeInstance;
+use std::collections::HashMap;
 
 type DomainId = String;
 

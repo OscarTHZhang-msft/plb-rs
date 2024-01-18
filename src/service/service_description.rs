@@ -1,7 +1,7 @@
 //! The internal state of a [Service]
 
-use super::service_metric::ServiceMetric;
 use super::service::Service;
+use super::service_metric::ServiceMetric;
 
 pub struct ServiceDescription {
     service_name: String,
