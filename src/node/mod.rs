@@ -1,4 +1,4 @@
 pub mod node;
-pub mod nodedescription;
-pub mod nodeid;
-pub mod nodeinstance;
+pub mod node_description;
+pub mod node_id;
+pub mod node_instance;

@@ -1,4 +1,4 @@
-use super::builtintype::BuiltInType;
+use super::built_in_type::BuiltInType;
 
 pub struct ServiceMetric {
     name: String,

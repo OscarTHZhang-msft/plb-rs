@@ -10,11 +10,11 @@ pub mod service;
 pub mod servicetype;
 
 use application::application::Application;
-use failoverunit::failoverunit::FailoverUnit;
+use failoverunit::failover_unit::FailoverUnit;
 use node::node::Node;
-use node::nodeid::NodeId;
+use node::node_id::NodeId;
 use service::service::Service;
-use servicetype::servicetype::ServiceType;
+use servicetype::service_type::ServiceType;
 
 use std::cmp::Ordering;
 

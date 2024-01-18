@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use super::node::Node;
-use super::nodeinstance::NodeInstance;
+use super::node_instance::NodeInstance;
 
 type DomainId = String;
 

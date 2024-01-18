@@ -1,6 +1,6 @@
 //! Represents an application in a Service Fabric cluster.
 
-use super::applicationdescription::ApplicationDescription;
+use super::application_description::ApplicationDescription;
 use std::collections::HashSet;
 
 pub struct Application {

@@ -1,3 +1,3 @@
 pub mod application;
-pub mod applicationcapacitiesdescription;
-pub mod applicationdescription;
+pub mod application_capacities_description;
+pub mod application_description;

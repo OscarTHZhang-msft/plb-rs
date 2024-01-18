@@ -1,4 +1,4 @@
-use super::nodeid::NodeId;
+use super::node_id::NodeId;
 
 pub struct NodeInstance {
     id: NodeId,
