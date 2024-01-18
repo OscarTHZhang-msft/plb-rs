@@ -7,10 +7,10 @@ use std::collections::HashMap;
 type DomainId = String;
 
 pub struct NodeDescription {
-    node_instance: NodeInstance,
-    is_up: bool,
-    capacity_ratios: HashMap<String, u32>,
-    capacities: HashMap<String, u32>,
+    pub(crate) node_instance: NodeInstance,
+    pub(crate) is_up: bool,
+    pub(crate) capacity_ratios: HashMap<String, u32>,
+    pub(crate) capacities: HashMap<String, u32>,
 }
 
 impl NodeDescription {

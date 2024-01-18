@@ -1,8 +1,8 @@
 use super::node_id::NodeId;
 
 pub struct NodeInstance {
-    id: NodeId,
-    instance_id: u64,
+    pub(crate) id: NodeId,
+    pub(crate) instance_id: u64,
 }
 
 impl NodeInstance {
@@ -15,8 +15,8 @@ impl NodeInstance {
 
     pub fn new(id: NodeId, instance_id: u64) -> NodeInstance {
         NodeInstance {
-            id: id,
-            instance_id: instance_id,
+            id,
+            instance_id,
         }
     }
 }
