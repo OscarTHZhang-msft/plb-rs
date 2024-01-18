@@ -3,19 +3,25 @@ use std::{
     sync::{Arc, Mutex, MutexGuard},
 };
 
+pub mod application;
+pub mod failoverunit;
+pub mod node;
+pub mod service;
+pub mod servicetype;
+
+use application::application::Application;
+use failoverunit::failover_unit::FailoverUnit;
+use node::node::Node;
+use node::node_id::NodeId;
+use service::service::Service;
+use servicetype::service_type::ServiceType;
+
 use std::cmp::Ordering;
 
 use anyhow::Result;
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
-type NodeId = u64;
-
-pub struct Node;
-pub struct Application;
-pub struct ServiceType;
-pub struct Service;
-pub struct FailoverUnit;
 pub struct LoadOrMoveCost;
 
 pub struct PLBScheduler;
@@ -185,7 +191,7 @@ impl PlacementAndLoadBalancing {
         node1: NodeId,
         node2: NodeId,
     ) -> i32 {
-        match node1.cmp(&node2) {
+        match node1.cmp(node2) {
             Ordering::Less => -1,
             Ordering::Equal => 0,
             Ordering::Greater => 1,
