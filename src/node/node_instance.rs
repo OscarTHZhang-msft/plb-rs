@@ -1,5 +1,5 @@
 use super::node_id::NodeId;
-
+#[derive(Debug, Clone, Copy)]
 pub struct NodeInstance {
     pub(crate) id: NodeId,
     pub(crate) instance_id: u64,

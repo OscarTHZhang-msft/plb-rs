@@ -1,5 +1,7 @@
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, VecDeque},
+    rc::Rc,
     sync::{Arc, Mutex},
 };
 
@@ -39,21 +41,24 @@ struct UpdateQueue {
     load_update_queue: VecDeque<LoadOrMoveCost>,
 }
 
-/// Similar to the C++ implementation. This is the main entry point of the entire PLB engine.
-/// It consists of all the required data structures to basically does 3 things:
-///     1. Listen to update cluster info API calls
-///     2. Run the PLB refresh loop
-///     3. Schedule searches and solutions if required
-pub struct PlacementAndLoadBalancing {
+pub struct ClusterSnapshot {
     nodes: BTreeMap<NodeId, Node>,
     apps: BTreeMap<String, Application>,
     service_types: BTreeMap<String, ServiceType>,
     services: BTreeMap<String, Service>,
     failover_units: BTreeMap<Uuid, FailoverUnit>,
     loads: BTreeMap<Uuid, LoadOrMoveCost>,
+}
+
+/// Similar to the C++ implementation. This is the main entry point of the entire PLB engine.
+/// It consists of all the required data structures to basically does 3 things:
+///     1. Listen to update cluster info API calls
+///     2. Run the PLB refresh loop
+///     3. Schedule searches and solutions if required
+pub struct PlacementAndLoadBalancing {
+    cluster_snapshot: Rc<RefCell<ClusterSnapshot>>,
 
     scheduler: PLBScheduler,
-
     searcher: Searcher,
     solver: Solver,
 
@@ -150,6 +155,8 @@ impl PlacementAndLoadBalancing {
         //  1. active PLB searcher to search for any actions
         //  2. activate solver to generate any solutions
         for phase in phases {
+            self.searcher = Searcher::new(&self.cluster_snapshot);
+            self.solver = Solver::new(&self.cluster_snapshot);
             let actions = self.searcher.generate_actions(phase);
             solutions = self.solver.generate_solutions(actions);
         }
@@ -164,7 +171,10 @@ impl PlacementAndLoadBalancing {
         while !node_updates.is_empty() {
             let node_update = node_updates.pop_front().unwrap();
             let node_id = node_update.node_id();
-            self.nodes.insert(node_id, node_update);
+            self.cluster_snapshot
+                .borrow_mut()
+                .nodes
+                .insert(node_id, node_update);
         }
     }
 
@@ -172,7 +182,10 @@ impl PlacementAndLoadBalancing {
         while !app_updates.is_empty() {
             let app_update = app_updates.pop_front().unwrap();
             let app_name = app_update.app_name();
-            self.apps.insert(String::from(app_name), app_update);
+            self.cluster_snapshot
+                .borrow_mut()
+                .apps
+                .insert(String::from(app_name), app_update);
         }
     }
 
@@ -180,7 +193,9 @@ impl PlacementAndLoadBalancing {
         while !service_type_updates.is_empty() {
             let service_type_update = service_type_updates.pop_front().unwrap();
             let service_type_name = service_type_update.service_type_name();
-            self.service_types
+            self.cluster_snapshot
+                .borrow_mut()
+                .service_types
                 .insert(String::from(service_type_name), service_type_update);
         }
     }
@@ -189,7 +204,9 @@ impl PlacementAndLoadBalancing {
         while !service_updates.is_empty() {
             let service_update = service_updates.pop_front().unwrap();
             let service_name = service_update.servcie_name();
-            self.services
+            self.cluster_snapshot
+                .borrow_mut()
+                .services
                 .insert(String::from(service_name), service_update);
         }
     }
@@ -201,7 +218,10 @@ impl PlacementAndLoadBalancing {
         while !failover_unit_updates.is_empty() {
             let failover_unit_update = failover_unit_updates.pop_front().unwrap();
             let fu_id = failover_unit_update.id();
-            self.failover_units.insert(fu_id, failover_unit_update);
+            self.cluster_snapshot
+                .borrow_mut()
+                .failover_units
+                .insert(fu_id, failover_unit_update);
         }
     }
 
@@ -209,7 +229,10 @@ impl PlacementAndLoadBalancing {
         while !load_updates.is_empty() {
             let load_update = load_updates.pop_front().unwrap();
             let fu_id = load_update.id();
-            self.loads.insert(fu_id, load_update);
+            self.cluster_snapshot
+                .borrow_mut()
+                .loads
+                .insert(fu_id, load_update);
         }
     }
 
