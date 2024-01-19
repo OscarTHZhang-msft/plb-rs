@@ -4,7 +4,7 @@ use super::service::Service;
 use super::service_metric::ServiceMetric;
 
 pub struct ServiceDescription {
-    service_name: String,
+    pub(crate) service_name: String,
     service_type_name: String,
     application_name: String,
     is_stateful: bool,

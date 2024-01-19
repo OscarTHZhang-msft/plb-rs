@@ -1,10 +1,11 @@
 use std::{
-    collections::{btree_map, BTreeMap, VecDeque},
+    collections::{BTreeMap, VecDeque},
     sync::{Arc, Mutex},
 };
 
 pub mod application;
 pub mod failoverunit;
+pub mod load;
 pub mod node;
 pub mod scheduler;
 pub mod searcher;
@@ -14,8 +15,9 @@ pub mod solver;
 
 use application::application::Application;
 use failoverunit::failover_unit::FailoverUnit;
+use load::load_or_move_cost::LoadOrMoveCost;
+use node::node::Node;
 use node::node_id::NodeId;
-use node::{node::Node, node_description::NodeDescription};
 use scheduler::PLBScheduler;
 use service::service::Service;
 use servicetype::service_type::ServiceType;
@@ -27,8 +29,6 @@ use searcher::Searcher;
 use solver::Solver;
 use time::OffsetDateTime;
 use uuid::Uuid;
-
-pub struct LoadOrMoveCost;
 
 struct UpdateQueue {
     node_update_queue: VecDeque<Node>,
@@ -177,22 +177,40 @@ impl PlacementAndLoadBalancing {
     }
 
     fn process_service_type_updates(&mut self, service_type_updates: &mut VecDeque<ServiceType>) {
-        unimplemented!()
+        while !service_type_updates.is_empty() {
+            let service_type_update = service_type_updates.pop_front().unwrap();
+            let service_type_name = service_type_update.service_type_name();
+            self.service_types
+                .insert(String::from(service_type_name), service_type_update);
+        }
     }
 
     fn process_service_updates(&mut self, service_updates: &mut VecDeque<Service>) {
-        unimplemented!()
+        while !service_updates.is_empty() {
+            let service_update = service_updates.pop_front().unwrap();
+            let service_name = service_update.servcie_name();
+            self.services
+                .insert(String::from(service_name), service_update);
+        }
     }
 
     fn process_failover_unit_updates(
         &mut self,
         failover_unit_updates: &mut VecDeque<FailoverUnit>,
     ) {
-        unimplemented!()
+        while !failover_unit_updates.is_empty() {
+            let failover_unit_update = failover_unit_updates.pop_front().unwrap();
+            let fu_id = failover_unit_update.id();
+            self.failover_units.insert(fu_id, failover_unit_update);
+        }
     }
 
     fn process_load_updates(&mut self, load_updates: &mut VecDeque<LoadOrMoveCost>) {
-        unimplemented!()
+        while !load_updates.is_empty() {
+            let load_update = load_updates.pop_front().unwrap();
+            let fu_id = load_update.id();
+            self.loads.insert(fu_id, load_update);
+        }
     }
 
     /// Given a failover unit and 2 candicate secondary replicas, return the comparision result for promoting to primary
