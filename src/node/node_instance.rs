@@ -5,14 +5,16 @@ pub struct NodeInstance {
     pub(crate) instance_id: u64,
 }
 
-impl NodeInstance {
-    pub fn default() -> NodeInstance {
+impl Default for NodeInstance {
+    fn default() -> NodeInstance {
         NodeInstance {
             id: NodeId::default(),
             instance_id: 0,
         }
     }
+}
 
+impl NodeInstance {
     pub fn new(id: NodeId, instance_id: u64) -> NodeInstance {
         NodeInstance { id, instance_id }
     }

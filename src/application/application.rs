@@ -4,8 +4,8 @@ use super::application_description::ApplicationDescription;
 use std::collections::HashSet;
 
 pub struct Application {
-    application_desc: ApplicationDescription,
-    services: HashSet<String>,
+    pub(crate) application_desc: ApplicationDescription,
+    pub(crate) services: HashSet<String>,
 }
 
 impl Application {

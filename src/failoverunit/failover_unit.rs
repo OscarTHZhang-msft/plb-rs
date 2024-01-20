@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
-use crate::node::{node_id::NodeId, node_instance::NodeInstance};
+use crate::node::{node_id::NodeId};
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
@@ -35,9 +35,9 @@ impl Replica {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FailoverUnit {
-    failover_unit_description: FailoverUnitDescription,
+    pub(crate) failover_unit_description: FailoverUnitDescription,
 }
 
 impl FailoverUnit {
@@ -50,10 +50,10 @@ impl FailoverUnit {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct FailoverUnitDescription {
     pub(crate) id: Uuid,
-    service_name: String,
-    replicas: HashMap<Uuid, Replica>,
-    replica_diff: i32,
+    pub(crate) service_name: String,
+    pub(crate) replicas: HashMap<Uuid, Replica>,
+    pub(crate) replica_diff: i32,
 }

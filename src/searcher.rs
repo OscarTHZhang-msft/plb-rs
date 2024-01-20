@@ -18,6 +18,7 @@ pub enum Action {
     FixConstraintViolation,
 }
 
+#[derive(Default)]
 pub struct Searcher {
     snapshot: Rc<RefCell<ClusterSnapshot>>,
 }
@@ -71,8 +72,8 @@ impl Searcher {
 
                 actions
             }
-            Phase::LoadBalancing => todo!(),
-            Phase::ConstraintCheck => todo!(),
+            Phase::LoadBalancing => vec![],
+            Phase::ConstraintCheck => vec![],
         }
     }
 }

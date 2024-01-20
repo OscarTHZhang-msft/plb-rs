@@ -3,7 +3,7 @@
 use super::service_description::ServiceDescription;
 
 pub struct Service {
-    service_description: ServiceDescription,
+    pub(crate) service_description: ServiceDescription,
 }
 
 impl Service {

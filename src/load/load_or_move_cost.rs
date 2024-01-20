@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 pub struct LoadOrMoveCost {
-    load_description: LoadOrMoveCostDescription,
+    pub(crate) load_description: LoadOrMoveCostDescription,
 }
 
 impl LoadOrMoveCost {

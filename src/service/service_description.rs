@@ -1,11 +1,12 @@
 //! The internal state of a [Service]
 
-use super::service::Service;
+
 use super::service_metric::ServiceMetric;
 
+#[derive(Default)]
 pub struct ServiceDescription {
     pub(crate) service_name: String,
-    service_type_name: String,
+    pub(crate) service_type_name: String,
     application_name: String,
     is_stateful: bool,
     placement_constraints: String,

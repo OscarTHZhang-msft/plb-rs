@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{searcher::Action, ClusterSnapshot};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Solution {
     AddReplica(String),
     DeleteReplica(String),
@@ -10,6 +10,7 @@ pub enum Solution {
     SwapReplica(String),
 }
 
+#[derive(Default)]
 pub struct Solver {
     snapshot: Rc<RefCell<ClusterSnapshot>>,
 }

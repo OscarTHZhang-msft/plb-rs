@@ -1,6 +1,6 @@
 //! The internal state of an [Application]
 
-use super::application::Application;
+
 use super::application_capacities_description::ApplicationCapacitiesDescription;
 use std::collections::HashMap;
 

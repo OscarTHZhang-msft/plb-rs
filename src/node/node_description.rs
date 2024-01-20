@@ -1,6 +1,7 @@
 //! The internal state of a [Node]
 
-use super::node::Node;
+
+
 use super::node_instance::NodeInstance;
 use std::collections::HashMap;
 
@@ -17,7 +18,7 @@ impl NodeDescription {
     pub fn default() -> NodeDescription {
         NodeDescription {
             node_instance: NodeInstance::default(),
-            is_up: false,
+            is_up: true,
             capacity_ratios: HashMap::new(),
             capacities: HashMap::new(),
         }

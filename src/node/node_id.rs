@@ -4,7 +4,7 @@ use std::fmt;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodeId {
-    id_value: u128,
+    pub(crate) id_value: u128,
 }
 
 impl NodeId {
@@ -15,7 +15,7 @@ impl NodeId {
     }
 
     pub fn new(id_value: u128) -> NodeId {
-        NodeId { id_value: id_value }
+        NodeId { id_value }
     }
 }
 

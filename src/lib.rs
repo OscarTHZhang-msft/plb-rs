@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, VecDeque},
+    collections::{BTreeMap, HashSet, VecDeque},
     rc::Rc,
     sync::{Arc, Mutex},
 };
@@ -15,23 +15,24 @@ pub mod service;
 pub mod servicetype;
 pub mod solver;
 
-use application::application::Application;
-use failoverunit::failover_unit::FailoverUnit;
-use load::load_or_move_cost::LoadOrMoveCost;
-use node::node::Node;
+use application::{application::Application, application_description::ApplicationDescription};
+use failoverunit::failover_unit::{FailoverUnit, FailoverUnitDescription};
+use load::load_or_move_cost::{LoadOrMoveCost, LoadOrMoveCostDescription};
 use node::node_id::NodeId;
+use node::{node::Node, node_description::NodeDescription};
 use scheduler::PLBScheduler;
-use service::service::Service;
-use servicetype::service_type::ServiceType;
+use service::{service::Service, service_description::ServiceDescription};
+use servicetype::{service_type::ServiceType, service_type_description::ServiceTypeDescription};
 
 use std::cmp::Ordering;
 
 use anyhow::Result;
 use searcher::Searcher;
-use solver::Solver;
+use solver::{Solution, Solver};
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+#[derive(Default)]
 struct UpdateQueue {
     node_update_queue: VecDeque<Node>,
     app_update_queue: VecDeque<Application>,
@@ -41,6 +42,7 @@ struct UpdateQueue {
     load_update_queue: VecDeque<LoadOrMoveCost>,
 }
 
+#[derive(Default)]
 pub struct ClusterSnapshot {
     nodes: BTreeMap<NodeId, Node>,
     apps: BTreeMap<String, Application>,
@@ -55,22 +57,18 @@ pub struct ClusterSnapshot {
 ///     1. Listen to update cluster info API calls
 ///     2. Run the PLB refresh loop
 ///     3. Schedule searches and solutions if required
+
+#[derive(Default)]
 pub struct PlacementAndLoadBalancing {
+    /// PLB takes snapshot of the cluster information before refreshing
+    /// During the PLB refresh this cluster snapshot can not be modified
     cluster_snapshot: Rc<RefCell<ClusterSnapshot>>,
-
-    scheduler: PLBScheduler,
-    searcher: Searcher,
-    solver: Solver,
-
     /// PLB cannot operate on stale operation, but also cannot be interrupted by the new update when searching for solutions
     /// This update queue is guarded by a single mutex and is read by PLB on the start of the refresh
     plb_update_queue: Arc<Mutex<UpdateQueue>>,
-}
-
-impl Default for PlacementAndLoadBalancing {
-    fn default() -> Self {
-        Self::new()
-    }
+    scheduler: PLBScheduler,
+    searcher: Searcher,
+    solver: Solver,
 }
 
 impl PlacementAndLoadBalancing {
@@ -81,57 +79,192 @@ impl PlacementAndLoadBalancing {
     ///     - Services
     ///     - Failover units
     ///     - Loads or move costs
-    pub fn new() -> Self {
+    pub fn new(
+        nodes: Vec<NodeDescription>,
+        apps: Vec<ApplicationDescription>,
+        service_types: Vec<ServiceTypeDescription>,
+        services: Vec<ServiceDescription>,
+        failover_units: Vec<FailoverUnitDescription>,
+        loads: Vec<LoadOrMoveCostDescription>,
+    ) -> Self {
+        // copy the cluster information to cluster snapshot, without going through the update queue
+        let node_map = nodes
+            .into_iter()
+            .map(|node_desc| {
+                (
+                    node_desc.node_instance.id,
+                    Node {
+                        node_description: node_desc,
+                    },
+                )
+            })
+            .collect::<BTreeMap<NodeId, Node>>();
+
+        let app_map = apps
+            .into_iter()
+            .map(|app_desc| {
+                (
+                    app_desc.app_name.clone(),
+                    Application {
+                        application_desc: app_desc,
+                        services: HashSet::new(),
+                    },
+                )
+            })
+            .collect::<BTreeMap<String, Application>>();
+
+        let service_type_map = service_types
+            .into_iter()
+            .map(|service_type_desc| {
+                (
+                    service_type_desc.name.clone(),
+                    ServiceType { service_type_desc },
+                )
+            })
+            .collect::<BTreeMap<String, ServiceType>>();
+
+        let service_map = services
+            .into_iter()
+            .map(|service_desc| {
+                (
+                    service_desc.service_name.clone(),
+                    Service {
+                        service_description: service_desc,
+                    },
+                )
+            })
+            .collect::<BTreeMap<String, Service>>();
+
+        let fu_map = failover_units
+            .into_iter()
+            .map(|fu_desc| {
+                (
+                    fu_desc.id,
+                    FailoverUnit {
+                        failover_unit_description: fu_desc,
+                    },
+                )
+            })
+            .collect::<BTreeMap<Uuid, FailoverUnit>>();
+
+        let load_map = loads
+            .into_iter()
+            .map(|load_desc| {
+                (
+                    load_desc.fu_id,
+                    LoadOrMoveCost {
+                        load_description: load_desc,
+                    },
+                )
+            })
+            .collect::<BTreeMap<Uuid, LoadOrMoveCost>>();
+
+        PlacementAndLoadBalancing {
+            cluster_snapshot: Rc::new(RefCell::new(ClusterSnapshot {
+                nodes: node_map,
+                apps: app_map,
+                service_types: service_type_map,
+                services: service_map,
+                failover_units: fu_map,
+                loads: load_map,
+            })),
+            plb_update_queue: Arc::new(Mutex::new(UpdateQueue::default())),
+            scheduler: PLBScheduler::new(OffsetDateTime::now_utc()),
+            searcher: Searcher::default(),
+            solver: Solver::default(),
+        }
+    }
+
+    pub fn update_node(&mut self, node_desc: NodeDescription) {
+        let update_queue_clone = Arc::clone(&self.plb_update_queue);
+        update_queue_clone
+            .lock()
+            .unwrap()
+            .node_update_queue
+            .push_back(Node {
+                node_description: node_desc,
+            });
+    }
+
+    pub fn delete_node(&mut self, _node_id: NodeId) -> Result<()> {
         unimplemented!()
     }
 
-    pub fn update_node() {
+    pub fn update_application(&self, app_desc: ApplicationDescription) {
+        let update_queue_clone = Arc::clone(&self.plb_update_queue);
+        update_queue_clone
+            .lock()
+            .unwrap()
+            .app_update_queue
+            .push_back(Application {
+                application_desc: app_desc,
+                services: HashSet::new(),
+            });
+    }
+
+    pub fn delete_application(&mut self) -> Result<()> {
         unimplemented!()
     }
 
-    pub fn delete_node() {
+    pub fn update_service_type(&mut self, service_type_desc: ServiceTypeDescription) {
+        let update_queue_clone = Arc::clone(&self.plb_update_queue);
+        update_queue_clone
+            .lock()
+            .unwrap()
+            .service_type_update_queue
+            .push_back(ServiceType {
+                service_type_desc,
+            });
+    }
+
+    pub fn delete_service_type(&mut self) -> Result<()> {
         unimplemented!()
     }
 
-    pub fn update_application() {
+    pub fn update_service(&mut self, service_desc: ServiceDescription) {
+        let update_queue_clone = Arc::clone(&self.plb_update_queue);
+        update_queue_clone
+            .lock()
+            .unwrap()
+            .service_update_queue
+            .push_back(Service {
+                service_description: service_desc,
+            });
+    }
+
+    pub fn delete_service(&mut self) -> Result<()> {
         unimplemented!()
     }
 
-    pub fn delete_application() {
+    pub fn update_failover_unit(&mut self, fu_desc: FailoverUnitDescription) {
+        let update_queue_clone = Arc::clone(&self.plb_update_queue);
+        update_queue_clone
+            .lock()
+            .unwrap()
+            .failover_unit_update_queue
+            .push_back(FailoverUnit {
+                failover_unit_description: fu_desc,
+            });
+    }
+
+    pub fn delete_failover_unit(&mut self) -> Result<()> {
         unimplemented!()
     }
 
-    pub fn update_service_type() {
-        unimplemented!()
-    }
-
-    pub fn delete_service_type() {
-        unimplemented!()
-    }
-
-    pub fn update_service() {
-        unimplemented!()
-    }
-
-    pub fn delete_service() {
-        unimplemented!()
-    }
-
-    pub fn update_failover_unit() {
-        unimplemented!()
-    }
-
-    pub fn delete_failover_unit() {
-        unimplemented!()
-    }
-
-    pub fn update_load_or_move_cost() {
-        unimplemented!()
+    pub fn update_load_or_move_cost(&mut self, load_desc: LoadOrMoveCostDescription) {
+        let update_queue_clone = Arc::clone(&self.plb_update_queue);
+        update_queue_clone
+            .lock()
+            .unwrap()
+            .load_update_queue
+            .push_back(LoadOrMoveCost {
+                load_description: load_desc,
+            });
     }
 
     /// Refresh the PLB data structures from the pending update queues.
     /// It also triggers PLBSchedular to schedule any searcher stages if any stages are due at the current timestamp of the refresh (now)
-    pub fn refresh(&mut self, now: OffsetDateTime) -> Result<()> {
+    pub fn refresh(&mut self, now: OffsetDateTime) -> Result<Vec<Solution>> {
         // Update PLB internal data structures to sync with the latest cluster information
         {
             let update_queue_clone = Arc::clone(&self.plb_update_queue);
@@ -164,7 +297,7 @@ impl PlacementAndLoadBalancing {
         // TODO: give action generated by the solver back to FM (this will just be printing out the solution to the console for now)
         println!("Solutions generated: {:?}", solutions);
 
-        Ok(())
+        Ok(solutions)
     }
 
     fn process_node_updates(&mut self, node_updates: &mut VecDeque<Node>) {
@@ -254,5 +387,91 @@ impl PlacementAndLoadBalancing {
             Ordering::Equal => 0,
             Ordering::Greater => 1,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::vec_deque;
+    use std::collections::HashMap;
+
+    use crate::scheduler::Phase;
+    use crate::scheduler::MIN_PLACEMENT_INTERVAL;
+
+    use self::failoverunit::failover_unit::Replica;
+
+    use super::*;
+
+    fn create_empty_plb() -> PlacementAndLoadBalancing {
+        PlacementAndLoadBalancing::new(vec![], vec![], vec![], vec![], vec![], vec![])
+    }
+
+    fn create_node_desc(node_id: u128) -> NodeDescription {
+        let mut node_desc = NodeDescription::default();
+        node_desc.node_instance.id = NodeId { id_value: node_id };
+        node_desc
+    }
+
+    fn create_service_type_desc(service_type_name: &str) -> ServiceTypeDescription {
+        let mut service_type_desc = ServiceTypeDescription::default();
+        service_type_desc.name = String::from(service_type_name);
+        service_type_desc
+    }
+
+    fn create_service_desc(service_type_name: &str, service_name: &str) -> ServiceDescription {
+        let mut service_desc = ServiceDescription::default();
+        service_desc.service_type_name = String::from(service_type_name);
+        service_desc.service_name = String::from(service_name);
+        service_desc
+    }
+
+    fn create_fu_desc(
+        fu_id: Uuid,
+        service_name: &str,
+        replicas: HashMap<Uuid, Replica>,
+        replica_diff: i32,
+    ) -> FailoverUnitDescription {
+        let mut fu_desc = FailoverUnitDescription::default();
+        fu_desc.id = fu_id;
+        fu_desc.service_name = String::from(service_name);
+        fu_desc.replicas = replicas;
+        fu_desc.replica_diff = replica_diff;
+        fu_desc
+    }
+
+    #[test]
+    fn test_dummy_placement_basic() {
+        // Get a bunch of failover units with replica diff = 1
+        // put them into PLB and expect the PLB to place them on the node with greatest node id
+        let mut plb = create_empty_plb();
+
+        plb.update_node(create_node_desc(0));
+        plb.update_node(create_node_desc(1));
+        plb.update_node(create_node_desc(2));
+
+        plb.update_service_type(create_service_type_desc("Worker.ISO"));
+        plb.update_service(create_service_desc("Worker.ISO", "LogicalServier"));
+        plb.update_failover_unit(create_fu_desc(
+            Uuid::from_u128(1),
+            "LogicalServer",
+            HashMap::new(),
+            1,
+        ));
+
+        let initial_time = OffsetDateTime::now_utc();
+        plb.scheduler
+            .set_last_phase_time(initial_time, Phase::Placement);
+
+        let solutions = plb.refresh(initial_time + MIN_PLACEMENT_INTERVAL).unwrap();
+
+        assert_eq!(1, solutions.len());
+        assert_eq!(
+            Solution::AddReplica(format!(
+                "Partition {:}: AddReplica on Node {:?}",
+                Uuid::from_u128(1),
+                NodeId::new(2)
+            )),
+            solutions[0]
+        );
     }
 }

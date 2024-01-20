@@ -3,7 +3,7 @@
 use time::{Duration, OffsetDateTime};
 
 /// Minimum duration between 2 placement phases
-const MIN_PLACEMENT_INTERVAL: Duration = Duration::new(3, 0);
+pub const MIN_PLACEMENT_INTERVAL: Duration = Duration::new(3, 0);
 /// Minimum duration between 2 load balancing phases
 const MIN_BALANCING_INTERVAL: Duration = Duration::new(10, 0);
 /// Minimu duration between 2 constraint check phases
@@ -81,7 +81,7 @@ impl PLBScheduler {
         phases
     }
 
-    pub fn set_last_phase_time(&mut self, now: OffsetDateTime, phase: Phase) {
+    pub(super) fn set_last_phase_time(&mut self, now: OffsetDateTime, phase: Phase) {
         match phase {
             Phase::Placement => self.last_placement_time = now,
             Phase::LoadBalancing => self.last_balancing_time = now,
